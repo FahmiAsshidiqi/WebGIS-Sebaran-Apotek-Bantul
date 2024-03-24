@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en" class="bg-light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <style>
+        #map {
+            width: 1000px;
+            height: 700px;
+            margin: 0 auto;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div
+        class="bg-image p-5 text-center shadow-1-strong text-white"
+        style="background-image: url('https://mdbcdn.b-cdn.net/img/new/slides/003.webp');"
+        >
+            <h1>WebGIS Sebaran Apotek dan Jumlah Apoteker di Kabupaten Bantul</h1>
+            <p>Praktikum SIGWEB Kelas A Teknologi Survei dan Pemetaan Dasar SV UGM</p> 
+        </div>
+        
+        <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+        <div class="container-fluid">
+            <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link active" href="https://www.instagram.com/dqfahmii/">Sosmed</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " href="https://geoportal.bantulkab.go.id/#/">Sumber</a>
+            </li>
+            </ul>
+            </div>
+        </nav>
+
+        <div class="container mt-5">
+        <div class="row">
+            <div class="col-sm-3">
+                <h2>Biodata :</h2>
+                <div class="">
+                    <img src="Foto_Fahmi Asshidiqi - Copy2.jpg" class="rounded" alt="Fahmi">
+                </div>
+                <p>Nama : Fahmi Asshidiqi
+                    <br>NIM : 22/499273/SV/21296<br>
+                    Kelas : A
+                </p>
+        
+                <hr class="d-sm-none">
+            </div>
+            <div class="col-sm-9">
+                <h2>Peta Sebaran Apotek dan Jumlah Apoteker</h2>
+                <div id="map" class="">
+                </div>
+                <script src="js/qgis2web_expressions.js"></script>
+                <script src="js/leaflet.js"></script>
+                <script src="js/leaflet.rotatedMarker.js"></script>
+                <script src="js/leaflet.pattern.js"></script>
+                <script src="js/leaflet-hash.js"></script>
+                <script src="js/Autolinker.min.js"></script>
+                <script src="js/rbush.min.js"></script>
+                <script src="js/labelgun.min.js"></script>
+                <script src="js/labels.js"></script>
+                <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+                <script src="data/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1.js"></script>
+                <script src="data/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2.js"></script>
+                <script src="data/ADMINISTRASI_LN_25K_3.js"></script>
+                <script src="data/JALAN_LN_25K_4.js"></script>
+                <script src="data/PEMERINTAHAN_PT_25K_5.js"></script>
+                <script src="data/SUNGAI_AR_25K_6.js"></script>
+                <script src="data/SUNGAI_LN_25K_7.js"></script>
+                <script src="data/ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8.js"></script>
+                <script>
+                var map = L.map('map', {
+                    zoomControl:true, maxZoom:28, minZoom:1
+                }).fitBounds([[-8.043200493792728,110.15853467739241],[-7.757828549024966,110.6049799621191]]);
+                var hash = new L.Hash(map);
+                map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+                var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+                function removeEmptyRowsFromPopupContent(content, feature) {
+                 var tempDiv = document.createElement('div');
+                 tempDiv.innerHTML = content;
+                 var rows = tempDiv.querySelectorAll('tr');
+                 for (var i = 0; i < rows.length; i++) {
+                     var td = rows[i].querySelector('td.visible-with-data');
+                     var key = td ? td.id : '';
+                     if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                         rows[i].parentNode.removeChild(rows[i]);
+                     }
+                 }
+                 return tempDiv.innerHTML;
+                }
+                document.querySelector(".leaflet-popup-pane").addEventListener("load", function(event) {
+                  var tagName = event.target.tagName,
+                    popup = map._popup;
+                  // Also check if flag is already set.
+                  if (tagName === "IMG" && popup && !popup._updated) {
+                    popup._updated = true; // Set flag to prevent looping.
+                    popup.update();
+                  }
+                }, true);
+                var bounds_group = new L.featureGroup([]);
+                function setBounds() {
+                }
+                map.createPane('pane_OSMStandard_0');
+                map.getPane('pane_OSMStandard_0').style.zIndex = 400;
+                var layer_OSMStandard_0 = L.tileLayer('http://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    pane: 'pane_OSMStandard_0',
+                    opacity: 1.0,
+                    attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, CC-BY-SA</a>',
+                    minZoom: 1,
+                    maxZoom: 28,
+                    minNativeZoom: 0,
+                    maxNativeZoom: 19
+                });
+                layer_OSMStandard_0;
+                map.addLayer(layer_OSMStandard_0);
+                function pop_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">wilayah</th>\
+                                <td>' + (feature.properties['wilayah'] !== null ? autolinker.link(feature.properties['wilayah'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                            <tr>\
+                                <th scope="row">jumlah</th>\
+                                <td>' + (feature.properties['jumlah'] !== null ? autolinker.link(feature.properties['jumlah'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_0(feature) {
+                    switch(String(feature.properties['jumlah'])) {
+                        case '0.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(31,104,223,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '1.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(143,236,172,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '2.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(231,134,158,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '3.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(240,140,118,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '4.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(25,232,184,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '5.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(33,23,240,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '9.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(150,213,79,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '10.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(95,231,80,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '12.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(123,198,217,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '15.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(136,53,231,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '30.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(220,167,83,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '34.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(207,87,220,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case '39.0':
+                            return {
+                        pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(233,238,91,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                    }
+                }
+                map.createPane('pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1');
+                map.getPane('pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1').style.zIndex = 401;
+                map.getPane('pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1').style['mix-blend-mode'] = 'normal';
+                var layer_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1 = new L.geoJson(json_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                    layerName: 'layer_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                    pane: 'pane_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1',
+                    onEachFeature: pop_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1,
+                    style: style_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_0,
+                });
+                bounds_group.addLayer(layer_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1);
+                map.addLayer(layer_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1);
+                function pop_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">penutup_la</th>\
+                                <td>' + (feature.properties['penutup_la'] !== null ? autolinker.link(feature.properties['penutup_la'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_0(feature) {
+                    switch(String(feature.properties['penutup_la'])) {
+                        case 'Bangunan Industri':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(177,118,202,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Hutan':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(119,237,202,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Kebun Campuran':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(235,109,224,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Kolam':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(94,107,219,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Lahan Terbuka':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(93,43,209,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Makam':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(132,239,24,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Pasir Pantai':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(121,202,112,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Permukiman':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(85,222,126,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Sawah Irigasi':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(219,163,42,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Sawah Tadah Hujan':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(82,142,203,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Semak':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(207,58,76,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Sungai':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(195,212,47,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Tambak':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(214,112,165,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                        case 'Tegalan/Ladang':
+                            return {
+                        pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(85,224,239,1.0)',
+                        interactive: true,
+                    }
+                            break;
+                    }
+                }
+                map.createPane('pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2');
+                map.getPane('pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2').style.zIndex = 402;
+                map.getPane('pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2').style['mix-blend-mode'] = 'normal';
+                var layer_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2 = new L.geoJson(json_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                    layerName: 'layer_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                    pane: 'pane_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2',
+                    onEachFeature: pop_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2,
+                    style: style_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_0,
+                });
+                bounds_group.addLayer(layer_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2);
+                map.addLayer(layer_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2);
+                function pop_ADMINISTRASI_LN_25K_3(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">REMARK</th>\
+                                <td>' + (feature.properties['REMARK'] !== null ? autolinker.link(feature.properties['REMARK'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                            <tr>\
+                                <th scope="row">NAMOBJ</th>\
+                                <td>' + (feature.properties['NAMOBJ'] !== null ? autolinker.link(feature.properties['NAMOBJ'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_ADMINISTRASI_LN_25K_3_0() {
+                    return {
+                        pane: 'pane_ADMINISTRASI_LN_25K_3',
+                        opacity: 1,
+                        color: 'rgba(152,125,183,1.0)',
+                        dashArray: '',
+                        lineCap: 'square',
+                        lineJoin: 'bevel',
+                        weight: 1.0,
+                        fillOpacity: 0,
+                        interactive: true,
+                    }
+                }
+                map.createPane('pane_ADMINISTRASI_LN_25K_3');
+                map.getPane('pane_ADMINISTRASI_LN_25K_3').style.zIndex = 403;
+                map.getPane('pane_ADMINISTRASI_LN_25K_3').style['mix-blend-mode'] = 'normal';
+                var layer_ADMINISTRASI_LN_25K_3 = new L.geoJson(json_ADMINISTRASI_LN_25K_3, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_ADMINISTRASI_LN_25K_3',
+                    layerName: 'layer_ADMINISTRASI_LN_25K_3',
+                    pane: 'pane_ADMINISTRASI_LN_25K_3',
+                    onEachFeature: pop_ADMINISTRASI_LN_25K_3,
+                    style: style_ADMINISTRASI_LN_25K_3_0,
+                });
+                bounds_group.addLayer(layer_ADMINISTRASI_LN_25K_3);
+                map.addLayer(layer_ADMINISTRASI_LN_25K_3);
+                function pop_JALAN_LN_25K_4(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">REMARK</th>\
+                                <td>' + (feature.properties['REMARK'] !== null ? autolinker.link(feature.properties['REMARK'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_JALAN_LN_25K_4_0() {
+                    return {
+                        pane: 'pane_JALAN_LN_25K_4',
+                        opacity: 1,
+                        color: 'rgba(243,166,178,1.0)',
+                        dashArray: '',
+                        lineCap: 'square',
+                        lineJoin: 'bevel',
+                        weight: 1.0,
+                        fillOpacity: 0,
+                        interactive: true,
+                    }
+                }
+                map.createPane('pane_JALAN_LN_25K_4');
+                map.getPane('pane_JALAN_LN_25K_4').style.zIndex = 404;
+                map.getPane('pane_JALAN_LN_25K_4').style['mix-blend-mode'] = 'normal';
+                var layer_JALAN_LN_25K_4 = new L.geoJson(json_JALAN_LN_25K_4, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_JALAN_LN_25K_4',
+                    layerName: 'layer_JALAN_LN_25K_4',
+                    pane: 'pane_JALAN_LN_25K_4',
+                    onEachFeature: pop_JALAN_LN_25K_4,
+                    style: style_JALAN_LN_25K_4_0,
+                });
+                bounds_group.addLayer(layer_JALAN_LN_25K_4);
+                map.addLayer(layer_JALAN_LN_25K_4);
+                function pop_PEMERINTAHAN_PT_25K_5(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">REMARK</th>\
+                                <td>' + (feature.properties['REMARK'] !== null ? autolinker.link(feature.properties['REMARK'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_PEMERINTAHAN_PT_25K_5_0() {
+                    return {
+                        pane: 'pane_PEMERINTAHAN_PT_25K_5',
+                        radius: 4.399999999999997,
+                        opacity: 1,
+                        color: 'rgba(0,0,0,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 2.0,
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(255,255,255,1.0)',
+                        interactive: true,
+                    }
+                }
+                map.createPane('pane_PEMERINTAHAN_PT_25K_5');
+                map.getPane('pane_PEMERINTAHAN_PT_25K_5').style.zIndex = 405;
+                map.getPane('pane_PEMERINTAHAN_PT_25K_5').style['mix-blend-mode'] = 'normal';
+                var layer_PEMERINTAHAN_PT_25K_5 = new L.geoJson(json_PEMERINTAHAN_PT_25K_5, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_PEMERINTAHAN_PT_25K_5',
+                    layerName: 'layer_PEMERINTAHAN_PT_25K_5',
+                    pane: 'pane_PEMERINTAHAN_PT_25K_5',
+                    onEachFeature: pop_PEMERINTAHAN_PT_25K_5,
+                    pointToLayer: function (feature, latlng) {
+                        var context = {
+                            feature: feature,
+                            variables: {}
+                        };
+                        return L.circleMarker(latlng, style_PEMERINTAHAN_PT_25K_5_0(feature));
+                    },
+                });
+                bounds_group.addLayer(layer_PEMERINTAHAN_PT_25K_5);
+                map.addLayer(layer_PEMERINTAHAN_PT_25K_5);
+                function pop_SUNGAI_AR_25K_6(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">NAMOBJ</th>\
+                                <td>' + (feature.properties['NAMOBJ'] !== null ? autolinker.link(feature.properties['NAMOBJ'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_SUNGAI_AR_25K_6_0() {
+                    return {
+                        pane: 'pane_SUNGAI_AR_25K_6',
+                        opacity: 1,
+                        color: 'rgba(35,35,35,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 1.0, 
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(196,60,57,1.0)',
+                        interactive: true,
+                    }
+                }
+                map.createPane('pane_SUNGAI_AR_25K_6');
+                map.getPane('pane_SUNGAI_AR_25K_6').style.zIndex = 406;
+                map.getPane('pane_SUNGAI_AR_25K_6').style['mix-blend-mode'] = 'normal';
+                var layer_SUNGAI_AR_25K_6 = new L.geoJson(json_SUNGAI_AR_25K_6, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_SUNGAI_AR_25K_6',
+                    layerName: 'layer_SUNGAI_AR_25K_6',
+                    pane: 'pane_SUNGAI_AR_25K_6',
+                    onEachFeature: pop_SUNGAI_AR_25K_6,
+                    style: style_SUNGAI_AR_25K_6_0,
+                });
+                bounds_group.addLayer(layer_SUNGAI_AR_25K_6);
+                map.addLayer(layer_SUNGAI_AR_25K_6);
+                function pop_SUNGAI_LN_25K_7(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">NAMOBJ</th>\
+                                <td>' + (feature.properties['NAMOBJ'] !== null ? autolinker.link(feature.properties['NAMOBJ'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_SUNGAI_LN_25K_7_0() {
+                    return {
+                        pane: 'pane_SUNGAI_LN_25K_7',
+                        opacity: 1,
+                        color: 'rgba(196,60,57,1.0)',
+                        dashArray: '',
+                        lineCap: 'square',
+                        lineJoin: 'bevel',
+                        weight: 1.0,
+                        fillOpacity: 0,
+                        interactive: true,
+                    }
+                }
+                map.createPane('pane_SUNGAI_LN_25K_7');
+                map.getPane('pane_SUNGAI_LN_25K_7').style.zIndex = 407;
+                map.getPane('pane_SUNGAI_LN_25K_7').style['mix-blend-mode'] = 'normal';
+                var layer_SUNGAI_LN_25K_7 = new L.geoJson(json_SUNGAI_LN_25K_7, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_SUNGAI_LN_25K_7',
+                    layerName: 'layer_SUNGAI_LN_25K_7',
+                    pane: 'pane_SUNGAI_LN_25K_7',
+                    onEachFeature: pop_SUNGAI_LN_25K_7,
+                    style: style_SUNGAI_LN_25K_7_0,
+                });
+                bounds_group.addLayer(layer_SUNGAI_LN_25K_7);
+                map.addLayer(layer_SUNGAI_LN_25K_7);
+                function pop_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8(feature, layer) {
+                    var popupContent = '<table>\
+                            <tr>\
+                                <th scope="row">Nama_Fasum</th>\
+                                <td>' + (feature.properties['Nama_Fasum'] !== null ? autolinker.link(feature.properties['Nama_Fasum'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                            <tr>\
+                                <th scope="row">Sumber</th>\
+                                <td>' + (feature.properties['Sumber'] !== null ? autolinker.link(feature.properties['Sumber'].toLocaleString()) : '') + '</td>\
+                            </tr>\
+                        </table>';
+                    layer.bindPopup(popupContent, {maxHeight: 400});
+                    var popup = layer.getPopup();
+                    var content = popup.getContent();
+                    var updatedContent = removeEmptyRowsFromPopupContent(content, feature);
+                    popup.setContent(updatedContent);
+                }
+        
+                function style_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8_0() {
+                    return {
+                        pane: 'pane_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8',
+                        radius: 4.799999999999997,
+                        opacity: 1,
+                        color: 'rgba(128,17,25,1.0)',
+                        dashArray: '',
+                        lineCap: 'butt',
+                        lineJoin: 'miter',
+                        weight: 2.0,
+                        fill: true,
+                        fillOpacity: 1,
+                        fillColor: 'rgba(219,30,42,1.0)',
+                        interactive: true,
+                    }
+                }
+                map.createPane('pane_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8');
+                map.getPane('pane_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8').style.zIndex = 408;
+                map.getPane('pane_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8').style['mix-blend-mode'] = 'normal';
+                var layer_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8 = new L.geoJson(json_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8, {
+                    attribution: '',
+                    interactive: true,
+                    dataVar: 'json_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8',
+                    layerName: 'layer_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8',
+                    pane: 'pane_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8',
+                    onEachFeature: pop_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8,
+                    pointToLayer: function (feature, latlng) {
+                        var context = {
+                            feature: feature,
+                            variables: {}
+                        };
+                        return L.circleMarker(latlng, style_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8_0(feature));
+                    },
+                });
+                bounds_group.addLayer(layer_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8);
+                map.addLayer(layer_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8);
+                var osmGeocoder = new L.Control.Geocoder({
+                    collapsed: true,
+                    position: 'topleft',
+                    text: 'Search',
+                    title: 'Testing'
+                }).addTo(map);
+                document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+                .className += ' fa fa-search';
+                document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+                .title += 'Search for a place';
+                var baseMaps = {};
+                L.control.layers(baseMaps,{'<img src="legend/ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8.png" /> Apotek — Sebaran_Apotek_di_Kabupaten_Bantul.shp': layer_ApotekSebaran_Apotek_di_Kabupaten_Bantulshp_8,'<img src="legend/SUNGAI_LN_25K_7.png" /> SUNGAI_LN_25K': layer_SUNGAI_LN_25K_7,'<img src="legend/SUNGAI_AR_25K_6.png" /> SUNGAI_AR_25K': layer_SUNGAI_AR_25K_6,'<img src="legend/PEMERINTAHAN_PT_25K_5.png" /> PEMERINTAHAN_PT_25K': layer_PEMERINTAHAN_PT_25K_5,'<img src="legend/JALAN_LN_25K_4.png" /> JALAN_LN_25K': layer_JALAN_LN_25K_4,'<img src="legend/ADMINISTRASI_LN_25K_3.png" /> ADMINISTRASI_LN_25K': layer_ADMINISTRASI_LN_25K_3,'Penggunaan lahan — penutup_lahan_ar_340220210302220623.shp<br /><table><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_BangunanIndustri0.png" /></td><td>Bangunan Industri</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Hutan1.png" /></td><td>Hutan</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_KebunCampuran2.png" /></td><td>Kebun Campuran</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Kolam3.png" /></td><td>Kolam</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_LahanTerbuka4.png" /></td><td>Lahan Terbuka</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Makam5.png" /></td><td>Makam</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_PasirPantai6.png" /></td><td>Pasir Pantai</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Permukiman7.png" /></td><td>Permukiman</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_SawahIrigasi8.png" /></td><td>Sawah Irigasi</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_SawahTadahHujan9.png" /></td><td>Sawah Tadah Hujan</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Semak10.png" /></td><td>Semak</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Sungai11.png" /></td><td>Sungai</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_Tambak12.png" /></td><td>Tambak</td></tr><tr><td style="text-align: center;"><img src="legend/Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2_TegalanLadang13.png" /></td><td>Tegalan/Ladang</td></tr></table>': layer_Penggunaanlahanpenutup_lahan_ar_340220210302220623shp_2,'Apoteker — jml_pdd_dengan_jns_pekerjaan_apoteker_th_2021.shp<br /><table><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_00.png" /></td><td>0</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_11.png" /></td><td>1</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_22.png" /></td><td>2</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_33.png" /></td><td>3</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_44.png" /></td><td>4</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_55.png" /></td><td>5</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_96.png" /></td><td>9</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_107.png" /></td><td>10</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_128.png" /></td><td>12</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_159.png" /></td><td>15</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_3010.png" /></td><td>30</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_3411.png" /></td><td>34</td></tr><tr><td style="text-align: center;"><img src="legend/Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1_3912.png" /></td><td>39</td></tr></table>': layer_Apotekerjml_pdd_dengan_jns_pekerjaan_apoteker_th_2021shp_1,"OSM Standard": layer_OSMStandard_0,},{collapsed:false}).addTo(map);
+                setBounds();
+                </script>
+                <p></p>
+                <p>Dengan adanya data sebaran Apotek dan Jumlah apoteker pada web ini diharapkan seluruh masyarakat akan lebih mudah mendapatkan informasi terkait pembelian obat obatan yang dijual secara resmi dan terjamin kualitasnya, begitujuga dengan jumlah apoteker yang terdapat di Bantul nantinya juga dapat diidentifikasi seberapa besar peluang pekerjaan apoteker di daerah Kabupaten Bantul.</p>
+        
+            </div>
+        </div>
+        </div>
+        
+        <div class="mt-5 p-4 bg-dark text-white text-center">
+            <br>WebGIS ini dibuat untuk memenuhi tugas Praktikum SIGWEB</br>
+            Teknologi Survei dan Pemetaan Dasar
+                <br>Sekolah Vokasi</br>
+                Universitas Gadjah Mada
+            </p>
+        </div>
+
+        
+    </body>
+</html>
